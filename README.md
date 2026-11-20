@@ -1,7 +1,7 @@
 # Quantum Cryptanalysis of Simplified AES (S-AES)
 
 
-> This repository presents a unified quantum cryptanalysis pipeline for Simplified AES (S-AES) using three different strategies. The project encodes the full S-AES encryption function (key schedule, SubBytes, ShiftRows, MixColumns, AddRoundKey) as a Boolean SAT formula using Massacci–Marraro minimized prime implicants, and introduces a DRAW (reachability) weighting scheme that assigns each SAT clause a weight proportional to the number of ciphertext bits it influences. 
+> This repository presents a unified quantum cryptanalysis pipeline for Simplified AES (S-AES) using different strategies. The project encodes the full S-AES encryption function (key schedule, SubBytes, ShiftRows, MixColumns, AddRoundKey) as a Boolean SAT formula using Massacci–Marraro minimized prime implicants, and introduces a DRAW (reachability) weighting scheme that assigns each SAT clause a weight proportional to the number of ciphertext bits it influences. 
 
 ---
 
@@ -11,7 +11,6 @@
 - [Mathematical Formulation](#mathematical-formulation)
   - [SAT Formulation and DRAW Weights](#sat-formulation-and-draw-weights)
 - [Key Recovery Approaches](#key-recovery-approaches)
-  - [Two-Phase Grover's Algorithm](#two-phase-grovers-algorithm)
   - [VQA](#vqa)
   - [DC-Guided Annealing](#dc-guided-annealing)
 - [Installation](#installation)
@@ -29,9 +28,8 @@ This repository studies the key-recovery problem on Simplified AES (S-AES) throu
 | `SAT_formulation/` | Classical SAT cryptanalysis | Massacci-Marraro CNF encoding + DRAW reachability weighting |
 | `VQA/` | Variational Quantum Algorithm | draw ansatz optimized with CMA-ES on Qiskit Aer |
 | `dc_guided_annealing/` | Hybrid quantum-classical annealing | Differential Cryptanalysis (DC) biased QUBO + neal SA |
-| `two_phase_grovers/` | Quantum Amplitude Amplification | Two-phase QAA with DRAW-split oracles (Oracle A / Oracle B) |
 
-All four modules share a common S-AES implementation (`SAT_formulation/saes.py`) and the DRAW clause weighting system (`SAT_formulation/draw_weights.py`).
+All modules share a common S-AES implementation (`SAT_formulation/saes.py`) and the DRAW clause weighting system (`SAT_formulation/draw_weights.py`).
 
 ---
 
@@ -62,16 +60,7 @@ w(clause_i) = |{ ciphertext bits reachable from vars(clause_i) }|
 
 ## Key Recovery Approaches
 
-We implement and evaluate search and optimization paradigms to explore the constraint landscape and recover the S-AES master key.
-
-## Two-Phase Grover's Algorithm (`two_phase_grovers/`)
-
-This module implements a Two-Phase Grover's search approach that compiles the classical cryptography into weighted SAT clauses (WCNF). It splits the physical quantum search into heavy and light constraints to optimize hardware resources.
-
-- **`two_phase_grovers/two_phase_grovers.py`**: The unified script that dynamically calculates surviving keys and optimal iteration counts via mathematically exact classical Boolean validation. *(Note: We explicitly bypass the Qiskit Aer simulator because executing a 51 qubit uncompressed oracle would exceed memory limits and crash. Instead, this script uses mathematically exact classical Boolean validation to scale the evaluation.)*
-- **`two_phase_grovers/gate_depth_analysis_new.py`**: A theoretical analysis script that explicitly constructs physical quantum circuits and uses Qiskit's compiler to extract the logical circuit depths and gate counts for forward pass only.
-- **`two_phase_grovers/Reversible_Circuit/`**: Contains the quantum reversible circuit components for S-AES (like the IO-based S-Box and MixColumns) and hardware execution scripts.
-
+We implement and evaluate optimization paradigms to explore the constraint landscape and recover the S-AES master key.
 
 ### VQA
 This approach runs a Variational Quantum Algorithm using Qiskit Aer to find the secret master key. It builds a diagonal cost Hamiltonian from the DRAW-weighted clause landscape and optimizes a parameterized ansatz circuit using CMA-ES.
@@ -85,8 +74,8 @@ This approach runs a Variational Quantum Algorithm using Qiskit Aer to find the 
 
 This approach compiles the S-AES SAT constraints into a QUBO and runs simulated annealing using D-Wave's neal sampler. It utilizes prior key bit probability distributions derived from classical Differential Cryptanalysis (DC) to bias the QUBO's linear terms, guiding the solver toward the correct key.
 
-- **`dc_guided_annealing/hybrid_qubo_compiler.py`**: Does the SAT-to-QUBO compilation. It transforms the DRAW logic into a Hybrid Bounded-Penalty QUBO model.
-- **`dc_guided_annealing/dc_annealing.py`**: The execution script. It computes DC biases from the cipher's MixColumns operation and executes a Two-Phase Annealing Strategy (Phase 1: DC-Biased Guided Descent, Phase 2: Pure QUBO Refinement) to recover the master key.
+- **`dc_guided_annealing/hybrid_qubo_compiler.py`**: Does the SAT-to-QUBO compilation. It transforms the DRAW logic into a QUBO model.
+- **`dc_guided_annealing/dc_annealing.py`**: The execution script. It computes DC biases from the cipher's MixColumns operation and executes a Two-Phase Annealing Strategy (Phase 1: DC-Biased Guided Descent, Phase 2: Pure Refinement) to recover the master key.
 ---
 
 ## Installation
@@ -105,13 +94,6 @@ pip install numpy scipy pysat dimod dwave-neal qiskit qiskit-aer cma matplotlib
 The simulated annealing search script can be executed directly, while the VQA script requires plaintext and key parameters to run:
 
 ```bash
-
-# Run the Two-Phase Grover's Algorithm
-python two_phase_grovers/two_phase_grovers.py
-
-# Run this to get the resource costs for the hardware implementation of two phase grovers
-python two_phase_grovers/gate_depth_analysis_new.py
-
 # Run the Variational Quantum Algorithm cost minimization
 python VQA/draw_vqa.py --pt 0xFFFF --key 0xA73B
 
